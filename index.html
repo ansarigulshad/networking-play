@@ -1526,12 +1526,11 @@ function renderMap(){
     html+='<div class="world-block"><div class="world-head"><div class="dot" style="background:'+w.color+';"></div><h2>'+w.icon+' World '+w.id+': '+w.name+'</h2>'+(earned?'<span class="badge earned">'+w.badgeIcon+'</span>':'')+'</div>';
     html+='<div class="levels-row">';
     w.levels.forEach(function(lid){
-      var locked=!state.unlocked[lid];
       var score=state.scores[lid];
       var isBoss=LEVELS[lid].isBoss;
-      html+='<div class="level-node '+(locked?'locked':'')+' '+(isBoss?'boss':'')+'" data-level="'+lid+'" style="border-color:'+(locked?'transparent':w.color)+';">'+
-        (isBoss? (locked?'🔒':LEVELS[lid].icon)+' <span>'+LEVELS[lid].title+'</span>' :
-        (locked? '<div style="font-size:26px;">🔒</div>' : '<div class="num">'+LEVELS[lid].icon+'</div><div class="stars">'+(score!==undefined? '⭐'.repeat(score)+'☆'.repeat(3-score) : 'NEW')+'</div>'))+
+      html+='<div class="level-node '+(isBoss?'boss':'')+'" data-level="'+lid+'" style="border-color:'+w.color+';">'+
+        (isBoss? LEVELS[lid].icon+' <span>'+LEVELS[lid].title+'</span>' :
+        '<div class="num">'+LEVELS[lid].icon+'</div><div class="stars">'+(score!==undefined? '⭐'.repeat(score)+'☆'.repeat(3-score) : 'NEW')+'</div>')+
         '</div>';
     });
     html+='</div></div>';
@@ -1545,7 +1544,6 @@ function renderMap(){
   $all('.level-node',app).forEach(function(node){
     node.addEventListener('click', function(){
       var lid=Number(node.getAttribute('data-level'));
-      if(!state.unlocked[lid]) return;
       state.currentLevel=lid; state.levelStage='story'; state.screen='level'; saveState(); render();
     });
   });
@@ -1562,11 +1560,16 @@ function renderLevel(){
       ['story','activity','quiz'].map(function(stage,i){
         var active=state.levelStage===stage;
         var passed = ['story','activity','quiz'].indexOf(state.levelStage) > i;
-        return '<div class="pill" style="background:'+(active?w.color:(passed?'#dfeee5':'#eee'))+';color:'+(active?'#fff':'#556')+';">'+(i+1)+'. '+stage+'</div>';
+        return '<div class="pill stage-pill" data-stage="'+stage+'" style="cursor:pointer;background:'+(active?w.color:(passed?'#dfeee5':'#eee'))+';color:'+(active?'#fff':'#556')+';">'+(i+1)+'. '+stage+'</div>';
       }).join('')+
     '</div>'+
     '<div id="levelBody"></div>';
   $('#backBtn').addEventListener('click', function(){ state.screen='map'; saveState(); render(); });
+  $all('.stage-pill',app).forEach(function(pill){
+    pill.addEventListener('click', function(){
+      state.levelStage=pill.getAttribute('data-stage'); saveState(); render();
+    });
+  });
   var body=$('#levelBody',app);
   if(state.levelStage==='story'){
     body.innerHTML =
