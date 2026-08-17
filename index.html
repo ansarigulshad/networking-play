@@ -75,7 +75,7 @@ p{line-height:1.5;}
 .device{display:flex;flex-direction:column;align-items:center;font-size:30px;cursor:grab;user-select:none;touch-action:none;}
 .device .label{font-size:11px;font-weight:700;color:var(--muted);margin-top:2px;background:#fff;padding:1px 5px;border-radius:6px;}
 .device.connected .label{color:var(--good);}
-.plug{font-size:18px;margin-top:2px;}
+.plug{font-size:18px;padding:12px;margin:-8px;display:inline-block;}
 .hint{font-size:14px;color:var(--muted);margin:6px 0;}
 .quiz-q{font-size:18px;font-weight:800;margin-bottom:14px;}
 .quiz-opt{display:block;width:100%;text-align:left;background:#fff;border:2px solid #dce4ec;border-radius:12px;padding:12px 16px;margin-bottom:10px;font-size:15px;cursor:pointer;font-family:inherit;}
@@ -249,24 +249,45 @@ function confetti(n){
 }
 function makeDraggable(handle, onDrop, dropzoneSelector){
   handle.style.touchAction='none';
+  var activePointerId=null;
   handle.addEventListener('pointerdown', function(e){
+    if(activePointerId!==null) return; // ignore a second finger/pointer mid-drag
+    activePointerId=e.pointerId;
     e.preventDefault();
     var ghost=handle.cloneNode(true);
     ghost.style.position='fixed';ghost.style.zIndex=9999;ghost.style.pointerEvents='none';
     ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px';ghost.style.transform='translate(-50%,-50%)';
     ghost.style.opacity='0.85';
     document.body.appendChild(ghost);
-    function move(ev){ ghost.style.left=ev.clientX+'px'; ghost.style.top=ev.clientY+'px'; }
-    function up(ev){
+    function move(ev){
+      if(ev.pointerId!==activePointerId) return;
+      ghost.style.left=ev.clientX+'px'; ghost.style.top=ev.clientY+'px';
+    }
+    function cleanup(){
       document.removeEventListener('pointermove',move);
       document.removeEventListener('pointerup',up);
+      document.removeEventListener('pointercancel',cancel);
       ghost.remove();
+      activePointerId=null;
+    }
+    function up(ev){
+      if(ev.pointerId!==activePointerId) return;
       var dz = document.elementFromPoint(ev.clientX,ev.clientY);
       dz = dz ? dz.closest(dropzoneSelector) : null;
+      cleanup();
       onDrop(dz, handle, ev);
+    }
+    function cancel(ev){
+      if(ev.pointerId!==activePointerId) return;
+      // The browser aborted the gesture (edge-swipe, scroll takeover, etc.) rather than
+      // completing it — clean up and treat it as a missed drop instead of leaving the
+      // ghost element and document-level listeners stuck around forever.
+      cleanup();
+      onDrop(null, handle, ev);
     }
     document.addEventListener('pointermove',move);
     document.addEventListener('pointerup',up);
+    document.addEventListener('pointercancel',cancel);
   });
 }
 
